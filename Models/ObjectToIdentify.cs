@@ -10,6 +10,6 @@ namespace jf.Models
     {
         public IFormFile Image2 { get; set; }
         public String GroupName { get; set; }
-        public string PathImage { get; set; }
+        public string ImageUrl { get; set; }
     }
 }

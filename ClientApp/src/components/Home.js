@@ -20,7 +20,6 @@ export class Home extends Component {
         }
         this.handleChange = this.handleChange.bind(this)
         this.handleSubmitTraining = this.handleSubmitTraining.bind(this)
-        this.handleSubmitIdentify = this.handleSubmitIdentify.bind(this)
         this.handleSubmitIdentify2 = this.handleSubmitIdentify2.bind(this)
         this.handleOpenImageUrl = this.handleOpenImageUrl.bind(this)
         this.handleOpenCamera = this.handleOpenCamera.bind(this)
@@ -75,31 +74,28 @@ export class Home extends Component {
         });
     }
     handleChange = event => {
-        this.setState({ [event.target.name]: event.target.value });      
+        this.setState({ [event.target.name]: event.target.value });
     }
     handleOpenImage = event => {
         Image2.delete("Image2"); //open new image => delete the previous image
         Image2.append("Image2", event.target.files[0]); //append the new one to send
         this.setState({
-            Image: URL.createObjectURL(event.target.files[0]), 
+            Image: URL.createObjectURL(event.target.files[0]),
             DetectObjects: [], //open new image => delete the previous detections.
-            Image2: Image2
+            Image2: Image2,
+            ImageUrl: ""
         });
     }
-    handleOpenImageUrl(url) {
+    handleOpenImageUrl = event => {
+        event.preventDefault();
         Image2.delete("Image2"); //open new image => delete the previous image
-        this.getBase64Image(url, function (base64image) {
-            console.log(base64image);
-            var x = this.dataURLtoFile(base64image, 'x.jpg');
-            Image2.append("Image2", x);
-        })
         this.setState({
-            Image: url,
-            DetectObjects: [], //open new image => delete the previous detections.
-            Image2: Image2
+            Image: this.state.ImageUrl,
+            Image2: null,
+            DetectObjects: [] //open new image => delete the previous detections.
         });
     }
-    
+
     handleSubmitTraining = event => {
         event.preventDefault();
         axios.post("/api/Face/addfaces", this.state)
@@ -107,35 +103,37 @@ export class Home extends Component {
             .then(res => console.log(res))
             .catch(error => console.log(error))
     }
-    handleSubmitIdentify = event => {
-        event.preventDefault();
-        axios.post("/api/Face/identify", this.state)
-            .then(console.log("path is", this.state))
-            .then(res => { console.log(res); this.setState({ DetectObjects: res.data }) })
-            .catch(error => console.log(error))
-    }
     handleSubmitIdentify2 = event => {
         event.preventDefault();
-        axios.post("/api/Face/identify2", Image2)
-            .then(res => { console.log(res); this.setState({ DetectObjects: res.data }) })
-            .catch(error => console.log(error))
+        if (this.state.ImageUrl == "") {
+            axios.post("/api/Face/identify2", Image2)
+                .then(res => { console.log(res); this.setState({ DetectObjects: res.data }) })
+                .catch(error => console.log(error))
+        }
+        else {
+            axios.post("/api/Face/identifyurl", this.state)
+                .then(console.log("path is", this.state))
+                .then(res => { console.log(res); this.setState({ DetectObjects: res.data }) })
+                .catch(error => console.log(error))
+        }
     }
 
-  
-    render() {      
+
+    render() {
         var decs = [];
         for (var i = 0; i < this.state.DetectObjects.length; i++) {
             decs.push(
                 <div key={i} style={{
                     color: "blue",
                     fontSize: "15px",
-                    textAlign: "center", 
+                    textAlign: "center",
                     position: "absolute",
                     border: "3px solid blue",
                     height: this.state.DetectObjects[i].height,
                     left: this.state.DetectObjects[i].left,
                     top: this.state.DetectObjects[i].top,
-                    width: this.state.DetectObjects[i].width}}>
+                    width: this.state.DetectObjects[i].width
+                }}>
                     {this.state.DetectObjects[i].name}
                 </div>);
         }
@@ -145,9 +143,10 @@ export class Home extends Component {
 
         };
 
-      return (
+        return (
 
-        <div>
+            <div>
+                {/*
             <form onSubmit={this.handleSubmitTraining}>
                 <input
                     placeholder="path to folder"
@@ -170,46 +169,70 @@ export class Home extends Component {
                     value={this.state.PathImage}
                     name="PathImage" />           
                 <input type="submit" value="identify" />
-            </form>
+            </form>*/}
+                <div style={{ alignItems: "center", textAlign: "center" }}>
+                    <div>
+                        <form onSubmit={this.handleOpenImageUrl}>
+                            <input
+                                style={{ width: "70%" }}
+                                placeholder="Image Url"
+                                onChange={this.handleChange}
+                                value={this.state.ImageUrl}
+                                name="ImageUrl" />
+                            <input type="submit" value="Ok" />
+                        </form>
+                        <div>
 
-            <input
-                placeholder="Image Url"
-                onChange={this.handleChange}
-                value={this.state.ImageUrl}
-                name="ImageUrl" />           
-            <button onClick={() => {this.handleOpenImageUrl(this.state.ImageUrl)}}>Ok</button>
+                            <input style={{ display: "none" }} onChange={this.handleOpenImage} id="file-upload" type="file" />
+                            <label for="file-upload" class="custom-file-upload">
+                                <img src="https://www.apkmirror.com/wp-content/uploads/2018/06/5b121ade9b2a6.png"
+                                    style={{ width: "70px", margin: "20px 20px 20px 20px" }} />
+                            </label>
 
-              
-            <form onSubmit={this.handleSubmitIdentify2}>
-                <input type="file" onChange={this.handleOpenImage} />              
-                <input type="submit" value="identify2" />
-            </form>
 
-            <button onClick={this.handleOpenCamera}>open camera</button>
-            <button onClick={this.handleCloseCamera}>close camera</button>
+                            <img src="https://lh3.googleusercontent.com/e-qFePY2XsGCRYgvE20kAOIe4GG9DrxbTX9tf5BMTVO5FM_z4KsL6FrqNmYpund_54va=w300"
+                                style={{ width: "70px", margin: "20px 20px 20px 20px" }} onClick={this.handleOpenCamera} />
+                        </div>
+                    </div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{display:"inline-block"}}>
+                        <div style={{ position: "relative" }}>
+                            {this.state.isCameraOpen
+                                ?
+                                <div>
+                                    <Camera
+                                        videoConstraints={videoConstraints}
+                                        height={"auto"}
+                                        width={100 + '%'}
+                                        ref='webcam'
+                                        screenshotFormat="image/jpeg"
+                                        screenshotQuality={1.0}
 
-            <div style={{position: "relative"}}>
-                  {this.state.isCameraOpen
-                      ?
-                      <div>
-                      <Camera
-                              videoConstraints={videoConstraints}
-                              height={100 + '%'}
-                              width={100 + '%'}
-                              ref='webcam'
-                              screenshotFormat="image/jpeg"
-                              screenshotQuality={1.0}
-                      />
-                      <button style={{ position: "absolute" }}
-                          onClick={this.handleTakePhoto}>take photo</button></div>
-                      : null}
+                                    />
+                                    <img onClick={this.handleCloseCamera}
+                                        style={{ width: "40px", position: "absolute", zIndex: 9999, left: "0%", top: "2%", left: "85%" }}
+                                        src="https://image.flaticon.com/icons/png/512/106/106830.png" />
+                                    <img style={{ width: "80px", position: "absolute", zIndex: 9999, left: "39%", bottom: "10%" }}
+                                        src="https://i.pinimg.com/originals/f9/24/62/f92462126022a3c3ce6700e4f15449dd.png"
+                                        onClick={this.handleTakePhoto} /></div>
+                                : null}
+                        </div>
+
+                        <div className="image" style={{ position: "relative" }}>
+                            <img src={this.state.Image} />
+                            {decs}
+                        </div>
+                        {this.state.Image ? <button onClick={this.handleSubmitIdentify2}
+                            style={{
+                                marginTop: "15px", borderRadius: "25%", padding: "10px 20px", textAlign: "center",
+                                display: "inline-block", fontSize: "16px", margin: "4px 2px", cursor: "pointer",
+                                transitionDuration: "0.4s", backgroundColor: "white", color: "black",
+                                border: "2px solid green"}} >identify</button>
+                            : null}
+                    </div>
+                </div>
             </div>
-
-            <div className="image" style={{ position: "relative" }}>
-                <img src={this.state.Image} />
-                {decs}
-            </div>
-        </div>
-    );
-  }
+        );
+    }
 }

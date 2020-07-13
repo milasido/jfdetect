@@ -26,11 +26,11 @@ namespace jf.Controllers
         //const int PersonCount = 10000;{
         const int CallLimitPerSecond = 10;
         static Queue<DateTime> _timeStampQueue = new Queue<DateTime>(CallLimitPerSecond);
-        
+
 
         static async Task WaitCallLimitPerSecondAsync()
         {
-            
+
             Monitor.Enter(_timeStampQueue);
             try
             {
@@ -71,7 +71,7 @@ namespace jf.Controllers
             //var allLargePersonGroups = await faceClient.LargePersonGroup.ListAsync();
             //if (allLargePersonGroups?.Any(x=>x.LargePersonGroupId == personGroupId)==false)
             {
-            await faceClient.PersonGroup.CreateAsync(personGroupId, personGroupName);
+                await faceClient.PersonGroup.CreateAsync(personGroupId, personGroupName);
             }
             //else status = "group already had";
 
@@ -79,12 +79,12 @@ namespace jf.Controllers
             // create persons for the persongroup
             Person[] persons = new Person[PersonCount];
             //Parallel.For(0, PersonCount, async i =>
-            for (int i=0; i<PersonCount; i++)
+            for (int i = 0; i < PersonCount; i++)
             {
                 //await WaitCallLimitPerSecondAsync();
                 string personName = $"{listOfFolder[i].Name}";
                 //if(await faceClient.PersonGroupPerson. GetAsync(personName) == null)
-                    persons[i] = await faceClient.PersonGroupPerson.CreateAsync(personGroupId, personName);
+                persons[i] = await faceClient.PersonGroupPerson.CreateAsync(personGroupId, personName);
                 //Thread.Sleep(1);
             };
 
@@ -110,8 +110,8 @@ namespace jf.Controllers
                         catch
                         {
                             continue;
-                        }                  
-                    }                  
+                        }
+                    }
                 }
             };
 
@@ -129,48 +129,46 @@ namespace jf.Controllers
             return Ok(persons);
         }
 
-        [HttpPost("identify")]
-        public async Task<IActionResult> Identify(TrainObject imgPath)
+        [HttpPost("identifyurl")]
+        public async Task<IActionResult> Identify(ObjectToIdentify objectToIdentify)
         {
             List<IdentifyObject> final = new List<IdentifyObject>();
-            using (Stream s = System.IO.File.OpenRead(imgPath.PathImage))
+            int i = 0;
+            var faces = await faceClient.Face.DetectWithUrlAsync(objectToIdentify.ImageUrl);
+            var faceIds = faces.Select(face => face.FaceId.Value).ToArray();
+            var results = await faceClient.Face.IdentifyAsync(faceIds, "jav");
+
+            foreach (var identifyResult in results)
             {
-                int i = 0;
-                var faces = await faceClient.Face.DetectWithStreamAsync(s);
-                var faceIds = faces.Select(face => face.FaceId.Value).ToArray();
-                var results = await faceClient.Face.IdentifyAsync(faceIds, "jav");
-             
-                foreach (var identifyResult in results)
+                if (identifyResult.Candidates.Count == 0)
                 {
-                    if (identifyResult.Candidates.Count == 0)
-                    {
-                        IdentifyObject x = new IdentifyObject();
-                        x.Name = "Unknown";
-                        x.Height = faces[i].FaceRectangle.Height;
-                        x.Left = faces[i].FaceRectangle.Left;
-                        x.Top = faces[i].FaceRectangle.Top;
-                        x.Width = faces[i].FaceRectangle.Width;
-                        x.Confidence = 0;
-                        final.Add(x);
-                        i++;
-                    }
-                    else
-                    {
-                        // Get top 1 among all candidates returned
-                        var candidateId = identifyResult.Candidates[0].PersonId;
-                        var person = await faceClient.PersonGroupPerson.GetAsync("jav", candidateId);
-                        IdentifyObject x = new IdentifyObject();
-                        x.Name = person.Name;
-                        x.Height = faces[i].FaceRectangle.Height;
-                        x.Left = faces[i].FaceRectangle.Left;
-                        x.Top = faces[i].FaceRectangle.Top;
-                        x.Width = faces[i].FaceRectangle.Width;
-                        x.Confidence = identifyResult.Candidates[0].Confidence;
-                        final.Add(x);
-                        i++;
-                    }
+                    IdentifyObject x = new IdentifyObject();
+                    x.Name = "Unknown";
+                    x.Height = faces[i].FaceRectangle.Height;
+                    x.Left = faces[i].FaceRectangle.Left;
+                    x.Top = faces[i].FaceRectangle.Top;
+                    x.Width = faces[i].FaceRectangle.Width;
+                    x.Confidence = 0;
+                    final.Add(x);
+                    i++;
+                }
+                else
+                {
+                    // Get top 1 among all candidates returned
+                    var candidateId = identifyResult.Candidates[0].PersonId;
+                    var person = await faceClient.PersonGroupPerson.GetAsync("jav", candidateId);
+                    IdentifyObject x = new IdentifyObject();
+                    x.Name = person.Name;
+                    x.Height = faces[i].FaceRectangle.Height;
+                    x.Left = faces[i].FaceRectangle.Left;
+                    x.Top = faces[i].FaceRectangle.Top;
+                    x.Width = faces[i].FaceRectangle.Width;
+                    x.Confidence = identifyResult.Candidates[0].Confidence;
+                    final.Add(x);
+                    i++;
                 }
             }
+
             return Ok(final);
         }
 
